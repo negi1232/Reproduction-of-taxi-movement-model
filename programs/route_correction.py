@@ -38,7 +38,8 @@ def calc_area(routes):#演算を行う正方形のエリアを計算
 class cal_route:
     def __init__(self,z) :
         #z=[35.65, 139.98,35.71, 140.04]#頂点を指定
-        self.G = ox.graph_from_bbox(z[1],z[3],z[0] ,z[2], network_type='drive')
+        #self.G = ox.graph_from_bbox(z[1],z[3],z[0] ,z[2], network_type='drive')
+        self.G = ox.graph_from_bbox(37.8780,37.4710,-122.1010 ,-122.5085, network_type='drive')
         self.fmap = ox.plot_graph_folium(self.G)
         self.last_pos=[0,0]
         self.route_dict={}
@@ -121,8 +122,23 @@ if __name__ == "__main__":
     route_cal=cal_route(z)
     r=route_cal.calc(routes,setting["grid"])
 
+    now=[routes[-1][3],routes[-1][4],routes[-1][5]]
+    trajectory=list()
+    trajectory.append(list())
     for route in routes[::-1]:
         print(route)
+        #日付の切り替わりを判断
+        if now[0]!=route[3] or now[1]!=route[4] or now[2]!=route[5]:
+            now=[route[3],route[4],route[5]]
+            trajectory.append(list())
+        
+        lat_lon=list()
+        for node in route_cal.calc(route[0],route[1]):
+            #print(node)
+            lat_lon.append( node )
+
+        trajectory[-1].append(lat_lon)
+        
         pass
     pass
 
