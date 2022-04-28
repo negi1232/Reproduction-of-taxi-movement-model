@@ -4,7 +4,9 @@ import json
 from tqdm import tqdm
 import numpy as np
 import osmnx as ox
-ox.config(use_cache=True, log_console=True)
+import pickle
+import sqlite3
+ox.config(use_cache=True, log_console=False)
 import rc_lib.data_pipe  as data_pipe
 def load_setting():#jsonファイルを読み込む
     json_open = open('settings.json', 'r')
@@ -36,14 +38,34 @@ def calc_area(routes):#演算を行う正方形のエリアを計算
     return z
 
 class cal_route:
-    def __init__(self,z) :
+    def __init__(self,z,setting) :
         #z=[35.65, 139.98,35.71, 140.04]#頂点を指定
-        #self.G = ox.graph_from_bbox(z[1],z[3],z[0] ,z[2], network_type='drive')
-        self.G = ox.graph_from_bbox(37.8780,37.4710,-122.1010 ,-122.5085, network_type='drive')
-        self.fmap = ox.plot_graph_folium(self.G)
+        print(z)
+
+        
+        save_path='./maps/'
+        file_name='map_'+str(z)+'.binaryfile'
+        
+        print(file_name in os.listdir(path='./maps/') )
+        if file_name in os.listdir(path='./maps/') :
+            with open(save_path+file_name, 'rb') as web:
+                self.G = pickle.load(web)
+        else:
+            self.G = ox.graph_from_bbox(z[0],z[1],z[2],z[3], network_type='drive')
+        
+            with open(save_path+file_name, 'wb') as web:
+                pickle.dump(self.G , web)
+       
+            opts = {"node_size": 5, "bgcolor": "white", "node_color": "blue", "edge_color": "blue"}
+            ox.plot_graph(self.G, show=False, save=True, filepath="road_network.png", **opts)
+        #self.G = ox.graph_from_bbox(37.8780,37.4710,-122.1010 ,-122.5085, network_type='drive')
+        #self.fmap = ox.plot_graph_folium(self.G)
         self.last_pos=[0,0]
         self.route_dict={}
         self.point_dict={}
+    
+    def reset(self):
+        self.last_pos=[0,0]
 
     def calc(self,lat,lon):
         pass
@@ -70,8 +92,6 @@ class cal_route:
 
             
             #最短経路探索を実施
-            
-
             try:
                 #print(self.route_dict[(start_node,end_node)])
                 shortest_path=self.route_dict[(start_node,end_node)]
@@ -97,19 +117,36 @@ class cal_route:
             #print([lat,lon])
             #yield lat,lon
 
-def onehot_feature(routes,states):
-        features = np.zeros(states)#特徴量ベクトルを宣言(use env)
-        for i in routes:#各軌道データごとで回す
-            for s in i:#各軌道から1stepごと
-                features[s] += 1#0~nまでの訪問回数をカウント
+class Sql_cont():
+    def __init__(self) :
+        files = os.listdir("./")
+        print(type(files))  # <class 'list'>
+        print(files)   
+        DB_FILE = "data.db"
+        self.conn = sqlite3.connect(DB_FILE)
+        self.cur = self.conn.cursor()
+        try:
+            self.cur.execute('DROP TABLE IF EXISTS reshape_route')
+        except:
+            pass
+        self.cur.execute('create table if not exists  reshape_route (year,month,day,hour,minutes,seconds,flag,trajectories)')
+    
+    def insert(self,trajectories):
+        bulk_data=list()
+        for d in trajectories[0]:
+            bulk_data.append([d[0],d[1],d[2],d[3],d[4],d[5],d[6],str(d[7])])
+        self.cur.executemany('INSERT INTO reshape_route (year,month,day,hour,minutes,seconds,flag,trajectories) values(?,?,?,?,?,?,?,?)',bulk_data)
+        
+        self.conn.commit()
 
-        features /= len(routes)#平均訪問回数を計算(特殊な計算式だが、リスト内の各要素に対して割り算を行っているだけ)1/M*Σfs
-        return features#平均訪問回数を返えす
+
+
 
 
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    sql=Sql_cont()
     setting=load_setting()#jsonファイルを読み込む
     print(str(setting))
     routes=data_pipe.import_data(filename=setting["target"])#データをimport
@@ -119,25 +156,31 @@ if __name__ == "__main__":
     #平均訪問回数を可視化
     #a=onehot_feature(routes,setting["grid"])
 
-    route_cal=cal_route(z)
+    route_cal=cal_route(z,setting)
     r=route_cal.calc(routes,setting["grid"])
 
     now=[routes[-1][3],routes[-1][4],routes[-1][5]]
     trajectory=list()
     trajectory.append(list())
     for route in routes[::-1]:
-        print(route)
+        #print(route)
         #日付の切り替わりを判断
         if now[0]!=route[3] or now[1]!=route[4] or now[2]!=route[5]:
+            print(now)
+            sql.insert(trajectory)
             now=[route[3],route[4],route[5]]
             trajectory.append(list())
+            route_cal.reset()
+            
+            #SQLに１日ずつ保存する
         
         lat_lon=list()
         for node in route_cal.calc(route[0],route[1]):
             #print(node)
             lat_lon.append( node )
 
-        trajectory[-1].append(lat_lon)
+        if len(lat_lon)!=0:
+            trajectory[-1].append([route[3],route[4],route[5],route[6],route[7],route[8] , route[2],lat_lon])
         
         pass
     pass
