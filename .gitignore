@@ -129,6 +129,14 @@ dmypy.json
 .pyre/
 
 #data
-/cabspottingdata
-/cache
-/maps
+/programs/cabspottingdata
+/programs/Data_processing/cache
+/programs/Data_processing/maps
+/programs/IRL/result
+/programs/IRL/cache
+/programs/IRL/maps
+/programs/RL/input_data
+/programs/RL/input_data
+/programs/RL/result
+
+/programs/data.db
