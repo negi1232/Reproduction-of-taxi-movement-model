@@ -1,0 +1,8 @@
+{
+    "target": "../cabspottingdata/new_abboip.txt",
+    "grid": 50,
+    "route_correction": {
+        "map_reuse": "True",
+        "osm_area": "./maps/map_[37.87847, 37.47133, -122.10135500000001, -122.50849500000001].binaryfile"
+    }
+}
