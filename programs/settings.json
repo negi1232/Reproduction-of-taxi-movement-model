@@ -1,8 +1,10 @@
 {
-    "target":"../cabspottingdata/new_abboip.txt",
-    "grid":50,
-    "route_correction":{
-        
-
+    "target": "../cabspottingdata/new_abboip.txt",
+    "save_dir": "./experiments",
+    "experiment_name": "/testa1",
+    "grid": 50,
+    "Data_processing": {
+        "map_reuse": "True",
+        "osm_area": "[37.80648357695361, 37.70149129294152, -122.353516842315, -122.52296739425346]"
     }
 }
